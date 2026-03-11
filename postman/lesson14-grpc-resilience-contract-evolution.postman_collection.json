@@ -1,0 +1,163 @@
+{
+  "info": {
+    "name": "Lesson 14 - gRPC Resilience + Contract Evolution",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3022"
+    },
+    {
+      "key": "orderId",
+      "value": "33333333-3333-3333-3333-333333333333"
+    },
+    {
+      "key": "userId",
+      "value": "22222222-2222-2222-2222-222222222222"
+    },
+    {
+      "key": "idempotencyKey",
+      "value": "lesson14-resilience-001"
+    },
+    {
+      "key": "paymentId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "0) GET /orders/health",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/orders/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('health ok', () => {",
+              "  pm.expect(pm.response.code).to.eql(200);",
+              "  const data = pm.response.json();",
+              "  pm.expect(data.ok).to.eql(true);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "1) Authorize with transient failure (retry expected)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "content-type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/orders/{{orderId}}/pay",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"amount\": \"149.50\",\n  \"currency\": \"USD\",\n  \"paymentMethod\": \"card\",\n  \"idempotencyKey\": \"{{idempotencyKey}}\",\n  \"simulateUnavailableOnce\": true\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('retry succeeded', () => {",
+              "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "  const data = pm.response.json();",
+              "  pm.expect(data).to.have.property('paymentId');",
+              "  pm.expect(data).to.have.property('schemaVersion');",
+              "  pm.collectionVariables.set('paymentId', data.paymentId);",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2) Repeat idempotent request (same paymentId expected)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "content-type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/orders/{{orderId}}/pay",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"amount\": \"149.50\",\n  \"currency\": \"USD\",\n  \"paymentMethod\": \"card\",\n  \"idempotencyKey\": \"{{idempotencyKey}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('same idempotency returns same paymentId', () => {",
+              "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "  const data = pm.response.json();",
+              "  pm.expect(data.paymentId).to.eql(pm.collectionVariables.get('paymentId'));",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3) Non-transient validation error (no retry)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "content-type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/orders/44444444-4444-4444-4444-444444444444/pay",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"amount\": \"0\",\n  \"currency\": \"USD\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('invalid amount -> 400', () => {",
+              "  pm.expect(pm.response.code).to.eql(400);",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

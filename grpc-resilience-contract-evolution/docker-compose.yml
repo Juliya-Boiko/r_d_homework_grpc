@@ -1,0 +1,30 @@
+services:
+  payments-grpc-resilience:
+    image: node:22-alpine
+    container_name: lesson14-payments-grpc-resilience
+    working_dir: /app
+    volumes:
+      - ./:/app
+    command: sh -c "corepack enable && pnpm install && pnpm start:payments:dev"
+    environment:
+      PAYMENTS_GRPC_BIND_URL: 0.0.0.0:5022
+    ports:
+      - "5022:5022"
+
+  orders-api-resilience:
+    image: node:22-alpine
+    container_name: lesson14-orders-api-resilience
+    working_dir: /app
+    volumes:
+      - ./:/app
+    command: sh -c "corepack enable && pnpm install && pnpm start:orders:dev"
+    environment:
+      ORDERS_PORT: 3022
+      PAYMENTS_GRPC_URL: payments-grpc-resilience:5022
+      PAYMENTS_RPC_TIMEOUT_MS: 1000
+      PAYMENTS_RPC_MAX_RETRIES: 2
+      PAYMENTS_RPC_BACKOFF_MS: 150
+    ports:
+      - "3022:3022"
+    depends_on:
+      - payments-grpc-resilience

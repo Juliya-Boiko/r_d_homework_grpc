@@ -1,0 +1,27 @@
+services:
+  payments-grpc:
+    image: node:22-alpine
+    container_name: lesson14-payments-grpc
+    working_dir: /app
+    volumes:
+      - ./:/app
+    command: sh -c "corepack enable && pnpm install && pnpm start:payments:dev"
+    environment:
+      PAYMENTS_GRPC_BIND_URL: 0.0.0.0:5021
+    ports:
+      - "5021:5021"
+
+  orders-api:
+    image: node:22-alpine
+    container_name: lesson14-orders-api
+    working_dir: /app
+    volumes:
+      - ./:/app
+    command: sh -c "corepack enable && pnpm install && pnpm start:orders:dev"
+    environment:
+      ORDERS_PORT: 3021
+      PAYMENTS_GRPC_URL: payments-grpc:5021
+    ports:
+      - "3021:3021"
+    depends_on:
+      - payments-grpc

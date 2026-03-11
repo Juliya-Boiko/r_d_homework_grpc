@@ -1,0 +1,36 @@
+{
+  "name": "lesson14-payments-grpc-extraction",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --runInBand",
+    "start:orders": "node dist/orders-service/main.js",
+    "start:payments": "node dist/payments-service/main.js",
+    "start:orders:dev": "ts-node -r tsconfig-paths/register src/orders-service/main.ts",
+    "start:payments:dev": "ts-node -r tsconfig-paths/register src/payments-service/main.ts",
+    "e2e:smoke": "ts-node -r tsconfig-paths/register scripts/e2e-smoke.ts"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.14.0",
+    "@nestjs/common": "^11.1.12",
+    "@nestjs/config": "^4.0.2",
+    "@nestjs/core": "^11.1.12",
+    "@nestjs/microservices": "^11.1.12",
+    "@nestjs/platform-express": "^11.1.12",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.3.0",
+    "jest": "^30.0.5",
+    "ts-node": "^10.9.2",
+    "ts-jest": "^29.4.0",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.9.2"
+  }
+}
