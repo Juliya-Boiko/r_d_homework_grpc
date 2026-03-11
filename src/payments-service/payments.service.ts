@@ -1,21 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { AuthorizeInput, PaymentStatusType } from './payments.types';
 
 type PaymentState = {
   paymentId: string;
   orderId: string;
-  status: 'PAYMENT_STATUS_AUTHORIZED' | 'PAYMENT_STATUS_CAPTURED' | 'PAYMENT_STATUS_REFUNDED' | 'PAYMENT_STATUS_FAILED';
+  status: PaymentStatusType;
 };
+
+type PaymentData = {
+  paymentId: string;
+  status: string;
+  message: string
+}
 
 @Injectable()
 export class PaymentsService {
   private readonly paymentsById = new Map<string, PaymentState>();
-  private readonly idempotencyMap = new Map<string, { paymentId: string; status: string; message: string }>();
+  private readonly idempotencyMap = new Map<string, PaymentData>();
 
-  authorize(input: {
-    orderId: string;
-    idempotencyKey?: string;
-  }): { paymentId: string; status: string; message: string } {
+  authorize(input: AuthorizeInput): PaymentData {
     if (input.idempotencyKey && this.idempotencyMap.has(input.idempotencyKey)) {
       return this.idempotencyMap.get(input.idempotencyKey)!;
     }

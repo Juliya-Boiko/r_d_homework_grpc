@@ -4,15 +4,16 @@ import { status as GrpcStatus } from '@grpc/grpc-js';
 import { GrpcMethod } from '@nestjs/microservices';
 import { PAYMENTS_SERVICE_NAME } from '../common/grpc.constants';
 import { PaymentsService } from './payments.service';
+import { AuthorizeInput } from './payments.types';
 
 @Controller()
 export class PaymentsGrpcController {
   private readonly logger = new Logger(PaymentsGrpcController.name);
 
-  constructor(private readonly paymentsService: PaymentsService) {}
+  constructor(private readonly paymentsService: PaymentsService) { }
 
   @GrpcMethod(PAYMENTS_SERVICE_NAME, 'Authorize')
-  authorize(payload: { orderId: string; idempotencyKey?: string }) {
+  authorize(payload: AuthorizeInput) {
     if (!payload.orderId) {
       throw new RpcException({
         code: GrpcStatus.INVALID_ARGUMENT,
