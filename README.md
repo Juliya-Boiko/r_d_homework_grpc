@@ -49,3 +49,33 @@ RESULT:
 **Підключення у сервісах**
 - Payments-service: використовується у PaymentsGrpcController та PaymentsModule
 - Orders-service: використовується у PaymentsGrpcClient через NestJS ClientGrpc
+
+# CI/CD Pipeline for Orders Service
+
+## Git Flow
+- `feature/*` → робочі гілки
+- `develop` → stage deploy
+- `main` → production deploy
+
+## Workflows
+1. **PR Checks** (`.github/workflows/pr-checks.yml`)
+   - lint
+   - unit tests
+   - Docker build validation
+
+2. **Build & Stage Deploy** (`.github/workflows/build-and-stage.yml`)
+   - build Docker image
+   - create release manifest
+   - deploy to local stage container
+   - health check
+
+3. **Deploy Production** (`.github/workflows/deploy-prod.yml`)
+   - manual trigger
+   - deploy same image to local production container
+   - health check
+
+## Testing locally
+- Stage: http://localhost:3021
+- Prod: http://localhost:4021
+
+<!-- test -->test PR
