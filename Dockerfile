@@ -1,21 +1,32 @@
-# Використовуємо легкий Node.js образ
-FROM node:20-alpine
-
-# Робоча директорія всередині контейнера
+# Stage 1: Build
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Копіюємо package.json і package-lock.json та встановлюємо залежності
-COPY package*.json ./
+# Копіюємо package.json та tsconfig файли
+COPY package*.json tsconfig*.json ./
+
+# Встановлюємо залежності
 RUN npm ci
 
-# Копіюємо всі файли проекту
+# Копіюємо весь код
 COPY . .
 
-# Будуємо TypeScript код
+# Запускаємо збірку TypeScript
 RUN npm run build
 
-# Виставляємо порт, на якому слухає додаток
+# Stage 2: Runtime
+FROM node:20-alpine
+WORKDIR /app
+
+# Копіюємо лише production залежності
+COPY --from=builder /app/package*.json ./
+RUN npm ci --production
+
+# Копіюємо зібраний код
+COPY --from=builder /app/dist ./dist
+
+# Виставляємо порт
 EXPOSE 3021
 
-# Стартовий командний рядок
+# Старт
 CMD ["node", "dist/main.js"]
