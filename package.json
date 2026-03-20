@@ -10,7 +10,8 @@
     "start:payments": "node dist/payments-service/main.js",
     "start:orders:dev": "ts-node -r tsconfig-paths/register src/orders-service/main.ts",
     "start:payments:dev": "ts-node -r tsconfig-paths/register src/payments-service/main.ts",
-    "e2e:smoke": "ts-node -r tsconfig-paths/register scripts/e2e-smoke.ts"
+    "e2e:smoke": "ts-node -r tsconfig-paths/register scripts/e2e-smoke.ts",
+    "lint": "eslint . --ext .ts,.js"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.14.0",
@@ -27,10 +28,13 @@
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/node": "^24.3.0",
+    "eslint": "^10.1.0",
+    "globals": "^17.4.0",
     "jest": "^30.0.5",
-    "ts-node": "^10.9.2",
     "ts-jest": "^29.4.0",
+    "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.57.1"
   }
 }
