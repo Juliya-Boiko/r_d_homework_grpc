@@ -9,48 +9,58 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Клон репозиторію
+      # 1️⃣ Клон репозиторію
       - uses: actions/checkout@v4
 
-      # Встановлюємо змінні оточення для Docker
+      # 2️⃣ Змінні для Docker
       - name: Set variables
         run: |
           echo "TAG=sha-${GITHUB_SHA}" >> $GITHUB_ENV
           echo "IMAGE=orders-local" >> $GITHUB_ENV
 
-      # Будуємо Docker образ
+      # 3️⃣ Build Docker image
       - name: Build Docker image
         run: docker build -t $IMAGE:$TAG .
 
-      # Створюємо release-manifest для інших кроків
+      # 4️⃣ Створюємо release manifest
       - name: Create release manifest
         run: |
           echo "{\"commit\":\"${GITHUB_SHA}\", \"services\":{\"orders\":{\"image\":\"$IMAGE:$TAG\"}}}" > release-manifest.json
 
-      # Завантажуємо manifest як артефакт
+      # 5️⃣ Завантажуємо manifest
       - uses: actions/upload-artifact@v4
         with:
           name: release
           path: release-manifest.json
 
-      # Розгортаємо контейнер і перевіряємо доступність
+      # 6️⃣ Розгортаємо контейнер і чекаємо, поки він стартує
       - name: Deploy to stage (local Docker)
         run: |
           IMAGE=$(jq -r '.services.orders.image' release-manifest.json)
+
+          # Зупиняємо старий контейнер
           docker stop orders || true
           docker rm orders || true
+
+          # Запускаємо новий
           docker run -d -p 3021:3021 --name orders $IMAGE
 
           echo "Waiting for app to start..."
-          for i in {1..10}; do
-            curl -s http://localhost:3021 && break
-            echo "Retry $i..."
+          timeout=30
+          while ! docker logs orders 2>&1 | grep -q "Listening on"; do
+            echo "Retry..."
             sleep 3
+            ((timeout-=3))
+            if [ $timeout -le 0 ]; then
+              echo "Timeout waiting for app"
+              docker logs orders
+              exit 1
+            fi
           done
 
-          # Підтверджуємо, що endpoint відповідає
-          curl -f http://localhost:3021 || exit 1
-
-      # Показуємо логи контейнера для дебагу
+          echo "App started. Checking endpoint..."
+          curl -f http://localhost:3021
+          
+      # 7️⃣ Логи для дебагу (опційно)
       - name: Show container logs
         run: docker logs orders
