@@ -9,37 +9,48 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout code
+      # Клон репозиторію
       - uses: actions/checkout@v4
 
-      # Set environment variables for Docker image
+      # Встановлюємо змінні оточення для Docker
       - name: Set variables
         run: |
           echo "TAG=sha-${GITHUB_SHA}" >> $GITHUB_ENV
           echo "IMAGE=orders-local" >> $GITHUB_ENV
 
-      # Build Docker image
+      # Будуємо Docker образ
       - name: Build Docker image
         run: docker build -t $IMAGE:$TAG .
 
-      # Create release manifest for other steps
+      # Створюємо release-manifest для інших кроків
       - name: Create release manifest
         run: |
           echo "{\"commit\":\"${GITHUB_SHA}\", \"services\":{\"orders\":{\"image\":\"$IMAGE:$TAG\"}}}" > release-manifest.json
 
-      # Upload manifest artifact
+      # Завантажуємо manifest як артефакт
       - uses: actions/upload-artifact@v4
         with:
           name: release
           path: release-manifest.json
 
-      # Deploy container to stage
+      # Розгортаємо контейнер і перевіряємо доступність
       - name: Deploy to stage (local Docker)
         run: |
           IMAGE=$(jq -r '.services.orders.image' release-manifest.json)
           docker stop orders || true
           docker rm orders || true
           docker run -d -p 3021:3021 --name orders $IMAGE
+
           echo "Waiting for app to start..."
-          sleep 5
+          for i in {1..10}; do
+            curl -s http://localhost:3021 && break
+            echo "Retry $i..."
+            sleep 3
+          done
+
+          # Підтверджуємо, що endpoint відповідає
           curl -f http://localhost:3021 || exit 1
+
+      # Показуємо логи контейнера для дебагу
+      - name: Show container logs
+        run: docker logs orders

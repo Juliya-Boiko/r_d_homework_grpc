@@ -1,21 +1,21 @@
-# Use official Node.js 20 image
+# Використовуємо легкий Node.js образ
 FROM node:20-alpine
 
-# Set working directory
+# Робоча директорія всередині контейнера
 WORKDIR /app
 
-# Copy package files and install dependencies
+# Копіюємо package.json і package-lock.json та встановлюємо залежності
 COPY package*.json ./
 RUN npm ci
 
-# Copy all source files
+# Копіюємо всі файли проекту
 COPY . .
 
-# Build TypeScript code
+# Будуємо TypeScript код
 RUN npm run build
 
-# Expose the port the app listens on
+# Виставляємо порт, на якому слухає додаток
 EXPOSE 3021
 
-# Run the compiled JS
+# Стартовий командний рядок
 CMD ["node", "dist/main.js"]
