@@ -38,16 +38,15 @@ jobs:
         run: |
           IMAGE=$(jq -r '.services.orders.image' release-manifest.json)
 
-          # Зупиняємо старий контейнер
-          docker stop orders || true
-          docker rm orders || true
+          # Delete old container if exists
+          docker ps -a -q --filter "name=orders" | xargs -r docker rm -f
 
-          # Запускаємо новий
+          # Run new container
           docker run -d -p 3021:3021 --name orders $IMAGE
 
           echo "Waiting for app to start..."
           timeout=30
-          while ! docker logs orders 2>&1 | grep -q "Listening on"; do
+          while ! docker logs orders 2>&1 | grep -q "orders-service started on"; do
             echo "Retry..."
             sleep 3
             ((timeout-=3))
@@ -59,7 +58,7 @@ jobs:
           done
 
           echo "App started. Checking endpoint..."
-          curl -f http://localhost:3021
+          curl -f http://localhost:3021/orders/health
           
       # 7️⃣ Логи для дебагу (опційно)
       - name: Show container logs
