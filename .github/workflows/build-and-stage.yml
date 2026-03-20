@@ -9,43 +9,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Клонируем репозиторий
+      # Checkout code
       - uses: actions/checkout@v4
 
-      # 2. Устанавливаем переменные среды
+      # Set environment variables for Docker image
       - name: Set variables
         run: |
           echo "TAG=sha-${GITHUB_SHA}" >> $GITHUB_ENV
           echo "IMAGE=orders-local" >> $GITHUB_ENV
 
-      # 3. Сборка Docker-образа
+      # Build Docker image
       - name: Build Docker image
         run: docker build -t $IMAGE:$TAG .
 
-      # 4. Создаём release-manifest.json
+      # Create release manifest for other steps
       - name: Create release manifest
         run: |
           echo "{\"commit\":\"${GITHUB_SHA}\", \"services\":{\"orders\":{\"image\":\"$IMAGE:$TAG\"}}}" > release-manifest.json
 
-      # 5. Загружаем артефакт для других job'ов
+      # Upload manifest artifact
       - uses: actions/upload-artifact@v4
         with:
           name: release
           path: release-manifest.json
 
-      # 6. Запуск контейнера локально и проверка доступности
+      # Deploy container to stage
       - name: Deploy to stage (local Docker)
         run: |
           IMAGE=$(jq -r '.services.orders.image' release-manifest.json)
           docker stop orders || true
           docker rm orders || true
           docker run -d -p 3021:3021 --name orders $IMAGE
-          echo "Waiting for container to start..."
-          sleep 5  # даём контейнеру время стартовать
-          docker ps
-          echo "Checking endpoint..."
-          # retry loop: 5 попыток с паузой 2 секунды
-          for i in {1..5}; do
-            curl -f http://localhost:3021 && break || echo "Retry $i..." && sleep 2
-          done
-          curl -f http://localhost:3021 || (docker logs orders && exit 1)
+          echo "Waiting for app to start..."
+          sleep 5
+          curl -f http://localhost:3021 || exit 1
