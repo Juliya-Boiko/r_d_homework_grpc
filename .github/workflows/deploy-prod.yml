@@ -1,0 +1,30 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+
+    concurrency:
+      group: prod
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release
+
+      - id: read
+        run: |
+          IMAGE=$(jq -r '.services.orders.image' release-manifest.json)
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
+
+      - name: Deploy to production (local Docker)
+        run: |
+          docker stop orders-prod || true
+          docker rm orders-prod || true
+          docker run -d -p 4021:3021 --name orders-prod ${{ steps.read.outputs.image }}
+          curl -f http://localhost:4021 || exit 1

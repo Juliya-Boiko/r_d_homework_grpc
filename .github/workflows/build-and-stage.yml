@@ -1,0 +1,37 @@
+name: Build & Stage Deploy
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set variables
+        run: |
+          echo "TAG=sha-${GITHUB_SHA}" >> $GITHUB_ENV
+          echo "IMAGE=orders-local" >> $GITHUB_ENV
+
+      - name: Build Docker image
+        run: docker build -t $IMAGE:$TAG .
+
+      - name: Create release manifest
+        run: |
+          echo "{\"commit\":\"${GITHUB_SHA}\", \"services\":{\"orders\":{\"image\":\"$IMAGE:$TAG\"}}}" > release-manifest.json
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release
+          path: release-manifest.json
+
+      - name: Deploy to stage (local Docker)
+        run: |
+          IMAGE=$(jq -r '.services.orders.image' release-manifest.json)
+          docker stop orders || true
+          docker rm orders || true
+          docker run -d -p 3021:3021 --name orders $IMAGE
+          curl -f http://localhost:3021 || exit 1
