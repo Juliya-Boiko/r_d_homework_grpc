@@ -7,33 +7,37 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    environment: stage
 
     steps:
-      # 1️⃣ Клон репозиторію
       - uses: actions/checkout@v4
 
-      # 2️⃣ Змінні для Docker
       - name: Set variables
         run: |
           echo "TAG=sha-${GITHUB_SHA}" >> $GITHUB_ENV
           echo "IMAGE=orders-local" >> $GITHUB_ENV
 
-      # 3️⃣ Build Docker image
       - name: Build Docker image
         run: docker build -t $IMAGE:$TAG .
 
-      # 4️⃣ Створюємо release manifest
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Tag image for registry
+        run: docker tag $IMAGE:$TAG ghcr.io/${{ github.repository }}/orders:$TAG
+
+      - name: Push image to registry
+        run: docker push ghcr.io/${{ github.repository }}/orders:$TAG
+
       - name: Create release manifest
         run: |
           echo "{\"commit\":\"${GITHUB_SHA}\", \"services\":{\"orders\":{\"image\":\"$IMAGE:$TAG\"}}}" > release-manifest.json
 
-      # 5️⃣ Завантажуємо manifest
       - uses: actions/upload-artifact@v4
         with:
           name: release
           path: release-manifest.json
 
-      # 6️⃣ Розгортаємо контейнер і чекаємо, поки він стартує
       - name: Deploy to stage (local Docker)
         run: |
           IMAGE=$(jq -r '.services.orders.image' release-manifest.json)
@@ -60,6 +64,5 @@ jobs:
           echo "App started. Checking endpoint..."
           curl -f http://localhost:3021/orders/health
           
-      # 7️⃣ Логи для дебагу (опційно)
       - name: Show container logs
         run: docker logs orders
