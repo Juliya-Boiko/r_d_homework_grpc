@@ -24,10 +24,10 @@ jobs:
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Tag image for registry
-        run: docker tag $IMAGE:$TAG ghcr.io/${{ github.repository }}/orders:$TAG
+        run: docker tag $IMAGE:$TAG ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')/orders:$TAG
 
       - name: Push image to registry
-        run: docker push ghcr.io/${{ github.repository }}/orders:$TAG
+        run: docker push ghcr.io/$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')/orders:$TAG
 
       - name: Create release manifest
         run: |
